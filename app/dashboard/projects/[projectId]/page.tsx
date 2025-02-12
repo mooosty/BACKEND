@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useDynamicContext } from '@dynamic-labs/sdk-react-core';
 import Link from 'next/link';
+import ApplyPopup from '@/app/components/ApplyPopup';
 
 interface Project {
   id: string;
@@ -23,6 +24,7 @@ export default function ProjectDetailsPage({ params }: { params: { projectId: st
   const [project, setProject] = useState<Project | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showApplyPopup, setShowApplyPopup] = useState(false);
 
   useEffect(() => {
     setMounted(true);
@@ -50,7 +52,21 @@ export default function ProjectDetailsPage({ params }: { params: { projectId: st
         console.log('Project details response:', data);
         
         if (data.success) {
-          setProject(data.project);
+          // Transform the project data to match our interface
+          const transformedProject = {
+            id: data.project._id,
+            title: data.project.title,
+            description: data.project.description,
+            imageUrl: data.project.imageUrl,
+            status: data.project.status || 'OPEN', // Default to OPEN if not specified
+            tasks: data.project.tasks?.length || 0,
+            applications: data.project.applications?.length || 0,
+            hasApplied: false, // We'll need to implement this check
+            createdAt: data.project.createdAt,
+            updatedAt: data.project.updatedAt
+          };
+          console.log('Transformed project:', transformedProject);
+          setProject(transformedProject);
         } else {
           throw new Error(data.error || 'Failed to fetch project details');
         }
@@ -66,6 +82,27 @@ export default function ProjectDetailsPage({ params }: { params: { projectId: st
       fetchProject();
     }
   }, [user, mounted, params.projectId]);
+
+  const handleApplySubmit = async (answers: string[]) => {
+    if (!user?.email) return;
+
+    const response = await fetch(`/api/projects/${params.projectId}/apply`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${user.email}`
+      },
+      body: JSON.stringify({ answers })
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.message || 'Failed to submit application');
+    }
+
+    // Update local state to reflect that user has applied
+    setProject(project => project ? { ...project, hasApplied: true } : null);
+  };
 
   if (!mounted) {
     return null;
@@ -155,7 +192,9 @@ export default function ProjectDetailsPage({ params }: { params: { projectId: st
 
             {/* Action Buttons */}
             <div className="mt-6 flex gap-4">
-              {project.status === 'OPEN' && (
+              {console.log('Project status:', project.status)}
+              {console.log('Has applied:', project.hasApplied)}
+              {project.status === 'OPEN' ? (
                 project.hasApplied ? (
                   <button 
                     disabled
@@ -165,12 +204,17 @@ export default function ProjectDetailsPage({ params }: { params: { projectId: st
                   </button>
                 ) : (
                   <button
-                    onClick={() => {}} // TODO: Implement apply functionality
+                    onClick={() => {
+                      console.log('Apply button clicked');
+                      setShowApplyPopup(true);
+                    }}
                     className="flex-1 px-6 py-3 rounded-lg bg-[#f5efdb] text-[#2a2a28] font-medium hover:opacity-90 transition-all"
                   >
                     Apply Now
                   </button>
                 )
+              ) : (
+                console.log('Project not open, status:', project.status)
               )}
               <button className="flex-1 px-6 py-3 rounded-lg border border-[#f5efdb33] text-[#f5efdb] font-medium hover:bg-[#f5efdb1a] transition-all">
                 View Tasks
@@ -182,6 +226,15 @@ export default function ProjectDetailsPage({ params }: { params: { projectId: st
         <div className="text-center py-12">
           <p className="text-[#f5efdb99]">Project not found.</p>
         </div>
+      )}
+
+      {/* Apply Popup */}
+      {showApplyPopup && (
+        <ApplyPopup
+          projectId={params.projectId}
+          onClose={() => setShowApplyPopup(false)}
+          onSubmit={handleApplySubmit}
+        />
       )}
     </div>
   );

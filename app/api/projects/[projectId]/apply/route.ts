@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { userAuth } from '@/middleware/userAuth';
-import dbConnect, { Project, Application } from '@/lib/db';
+import { userAuth } from '@/src/middleware/userAuth';
+import dbConnect from '@/lib/db';
+import Project from '@/models/Project';
+import Application from '@/src/models/Application';
 
 export async function POST(
   request: NextRequest,
