@@ -31,9 +31,30 @@ export async function GET(request: NextRequest) {
 
   try {
     const projects = await Project.find().sort({ createdAt: -1 });
+    console.log('Raw projects:', projects); // Debug log
+    
+    // Transform projects to include id
+    const transformedProjects = projects.map(project => {
+      // Convert Mongoose document to plain object
+      const plainProject = project.toObject();
+      console.log('Plain project:', plainProject); // Debug log
+      
+      return {
+        id: plainProject._id.toString(), // Convert ObjectId to string
+        title: plainProject.title,
+        description: plainProject.description,
+        imageUrl: plainProject.imageUrl,
+        status: plainProject.status,
+        createdAt: plainProject.createdAt,
+        updatedAt: plainProject.updatedAt
+      };
+    });
+    
+    console.log('Transformed projects:', transformedProjects); // Debug log
+
     return NextResponse.json({ 
       success: true,
-      data: projects
+      data: transformedProjects
     });
   } catch (error) {
     console.error('Error fetching projects:', error);

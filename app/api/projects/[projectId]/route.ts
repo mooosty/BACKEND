@@ -1,16 +1,35 @@
 import { NextRequest, NextResponse } from 'next/server';
 import mongoose from 'mongoose';
-import dbConnect, { Project } from '@/lib/db';
+import dbConnect from '@/lib/db';
+import Project from '@/models/Project';
+
 
 export async function GET(
   request: NextRequest,
   { params }: { params: { projectId: string } }
 ) {
   try {
+    console.log('--------------------------')
+    console.log('--------------------------')
+    console.log('--------------------------')
+    console.log('--------------------------')
+    console.log(params.projectId)
+    console.log('--------------------------')
+    console.log('--------------------------')
+    console.log('--------------------------')
+    console.log('--------------------------')
     await dbConnect();
 
     // Get user email from auth header
     const authHeader = request.headers.get('authorization');
+    console.log('--------------------------')
+    console.log('--------------------------')
+    console.log('--------------------------')
+    console.log('--------------------------')
+    console.log(authHeader)
+    console.log('--------------------------')
+    console.log('--------------------------')
+    console.log('--------------------------')
     if (!authHeader?.startsWith('Bearer ')) {
       return NextResponse.json({
         success: false,

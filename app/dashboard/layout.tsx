@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import { useDynamicContext } from '@dynamic-labs/sdk-react-core';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
+import Link from 'next/link';
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -11,6 +12,7 @@ interface DashboardLayoutProps {
 export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const { user, isAuthenticated } = useDynamicContext();
   const router = useRouter();
+  const pathname = usePathname();
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -27,6 +29,8 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     return null;
   }
 
+  const isActive = (path: string) => pathname === path;
+
   return (
     <div className="min-h-screen bg-[#2a2a28]">
       <div className="flex min-h-screen">
@@ -39,11 +43,29 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
             <nav className="flex-1 p-4">
               <ul className="space-y-2">
                 <li>
-                  <a href="/dashboard" className="flex items-center px-4 py-2 text-[#f5efdb] rounded-lg hover:bg-[#f5efdb1a] transition-all">
+                  <Link 
+                    href="/dashboard" 
+                    className={`flex items-center px-4 py-2 text-[#f5efdb] rounded-lg transition-all ${
+                      isActive('/dashboard') 
+                        ? 'bg-[#f5efdb1a]' 
+                        : 'hover:bg-[#f5efdb1a]'
+                    }`}
+                  >
                     Overview
-                  </a>
+                  </Link>
                 </li>
-                {/* Add more navigation items here as we create them */}
+                <li>
+                  <Link 
+                    href="/dashboard/projects" 
+                    className={`flex items-center px-4 py-2 text-[#f5efdb] rounded-lg transition-all ${
+                      isActive('/dashboard/projects') 
+                        ? 'bg-[#f5efdb1a]' 
+                        : 'hover:bg-[#f5efdb1a]'
+                    }`}
+                  >
+                    Projects
+                  </Link>
+                </li>
               </ul>
             </nav>
           </div>
