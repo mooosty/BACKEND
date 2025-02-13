@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import mongoose from 'mongoose';
-import dbConnect, { Project, ChatMessage } from '@/lib/db';
+import dbConnect from '@/lib/db';
+import Project from '@/models/Project';
+import ChatMessage from '@/models/ChatMessage';
 
 // Get chat messages for a project
 export async function GET(

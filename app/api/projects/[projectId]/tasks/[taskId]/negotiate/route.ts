@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import mongoose from 'mongoose';
-import dbConnect, { Task, ChatMessage, TaskModification } from '@/lib/db';
+import dbConnect from '@/lib/db';
+import Task from '@/models/Task';
+import ChatMessage from '@/models/ChatMessage';
+import TaskModification from '@/models/TaskModification';
 
 export async function PUT(
   request: NextRequest,

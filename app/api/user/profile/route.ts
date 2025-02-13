@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import dbConnect, { Application, Task } from '@/lib/db';
+import dbConnect from '@/lib/db';
+import Application from '@/models/Application';
+import Task from '@/models/Task';
 
 export async function GET(request: NextRequest) {
   try {

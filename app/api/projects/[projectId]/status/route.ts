@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { adminAuth } from '@/app/middleware/adminAuth';
-import dbConnect, { Project } from '@/lib/db';
+import dbConnect from '@/lib/db';
+import Project from '@/models/Project';
 
 export async function PUT(
   request: NextRequest,
