@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import mongoose from 'mongoose';
 import dbConnect from '@/lib/db';
-import Task from '@/src/models/Task';
+import Task from '@/models/Task';
 
 // Handle GET requests to list tasks
 export async function GET(

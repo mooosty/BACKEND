@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { adminAuth } from '@/middleware/adminAuth';
+import { adminAuth } from '@/app/middleware/adminAuth';
 import dbConnect, { Application } from '@/lib/db';
 
 export async function PUT(
