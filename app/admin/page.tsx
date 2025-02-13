@@ -1,95 +1,101 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useDynamicContext } from '@dynamic-labs/sdk-react-core';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 
-export default function AdminPage() {
-  const [adminCode, setAdminCode] = useState('');
-  const [error, setError] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const { user, primaryWallet } = useDynamicContext();
+export default function AdminLoginPage() {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
   const router = useRouter();
-
-  useEffect(() => {
-    if (!user) {
-      router.push('/');
-    }
-  }, [user, router]);
-
-  if (!user) {
-    return null;
-  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
-    setError('');
+    setError(null);
+    setLoading(true);
 
     try {
-      const response = await fetch('/api/admin/verify', {
+      const response = await fetch('/api/admin/login', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${primaryWallet?.address || ''}`
         },
-        body: JSON.stringify({ adminCode }),
+        body: JSON.stringify({ email, password }),
       });
 
       const data = await response.json();
 
-      if (response.ok) {
-        router.push('/admin/dashboard');
-      } else {
-        setError(data.error || 'Invalid admin code');
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to login');
       }
+
+      // Set admin cookie/session
+      document.cookie = `adminAccess=true; path=/`;
+      router.push('/admin/dashboard');
     } catch (err) {
-      setError('An error occurred. Please try again.');
+      setError(err instanceof Error ? err.message : 'Failed to login');
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-gray-100 flex items-center justify-center">
-      <div className="max-w-md w-full bg-white rounded-lg shadow-lg p-8">
-        <h1 className="text-2xl font-bold text-center mb-8">Admin Access</h1>
-        
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div>
-            <label 
-              htmlFor="adminCode" 
-              className="block text-sm font-medium text-gray-700 mb-2"
-            >
-              Enter Admin Code
-            </label>
-            <input
-              id="adminCode"
-              type="password"
-              value={adminCode}
-              onChange={(e) => setAdminCode(e.target.value)}
-              className="w-full px-4 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              placeholder="Enter the admin access code"
-              required
-            />
-          </div>
+    <div className="min-h-screen bg-[#2a2a28] flex items-center justify-center p-4">
+      <div className="w-full max-w-md">
+        <div className="rounded-xl backdrop-blur-md bg-[#2a2a2833] border border-[#f5efdb1a] p-8">
+          <h1 className="text-3xl font-display text-[#f5efdb] mb-8 text-center">Admin Login</h1>
 
-          {error && (
-            <div className="text-red-500 text-sm text-center">
-              {error}
+          <form onSubmit={handleSubmit} className="space-y-6">
+            {error && (
+              <div className="rounded-lg p-3 bg-red-500/10 border border-red-500/20 text-red-500 text-sm">
+                {error}
+              </div>
+            )}
+
+            <div>
+              <label htmlFor="email" className="block text-sm text-[#f5efdb] mb-2">
+                Email
+              </label>
+              <input
+                id="email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="w-full px-4 py-3 rounded-lg bg-[#1e1e1c] border border-[#f5efdb1a] text-[#f5efdb] placeholder-[#f5efdb66] focus:outline-none focus:border-[#f5efdb33]"
+                placeholder="Enter your email"
+                required
+              />
             </div>
-          )}
 
-          <button
-            type="submit"
-            disabled={isLoading}
-            className={`w-full py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 ${
-              isLoading ? 'opacity-50 cursor-not-allowed' : ''
-            }`}
-          >
-            {isLoading ? 'Verifying...' : 'Submit'}
-          </button>
-        </form>
+            <div>
+              <label htmlFor="password" className="block text-sm text-[#f5efdb] mb-2">
+                Password
+              </label>
+              <input
+                id="password"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full px-4 py-3 rounded-lg bg-[#1e1e1c] border border-[#f5efdb1a] text-[#f5efdb] placeholder-[#f5efdb66] focus:outline-none focus:border-[#f5efdb33]"
+                placeholder="Enter password"
+                required
+              />
+            </div>
+
+            <button
+              type="submit"
+              disabled={loading}
+              className={`w-full px-6 py-3 rounded-lg font-medium transition-all ${
+                loading
+                  ? 'bg-[#f5efdb33] text-[#f5efdb99] cursor-not-allowed'
+                  : 'bg-[#f5efdb] text-[#2a2a28] hover:opacity-90'
+              }`}
+            >
+              {loading ? 'Logging in...' : 'Login'}
+            </button>
+          </form>
+        </div>
       </div>
     </div>
   );

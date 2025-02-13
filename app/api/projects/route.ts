@@ -1,9 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import connectDB from '@/config/database';
-import Project from '@/models/Project';
-
-// Connect to database
-connectDB();
+import dbConnect from '@/lib/db';
+import Project from '@/src/models/Project';
 
 export async function GET(request: NextRequest) {
   // Log headers for debugging
@@ -30,17 +27,14 @@ export async function GET(request: NextRequest) {
   }
 
   try {
+    await dbConnect();
     const projects = await Project.find().sort({ createdAt: -1 });
-    console.log('Raw projects:', projects); // Debug log
     
     // Transform projects to include id
     const transformedProjects = projects.map(project => {
-      // Convert Mongoose document to plain object
       const plainProject = project.toObject();
-      console.log('Plain project:', plainProject); // Debug log
-      
       return {
-        id: plainProject._id.toString(), // Convert ObjectId to string
+        id: plainProject._id.toString(),
         title: plainProject.title,
         description: plainProject.description,
         imageUrl: plainProject.imageUrl,
@@ -49,8 +43,6 @@ export async function GET(request: NextRequest) {
         updatedAt: plainProject.updatedAt
       };
     });
-    
-    console.log('Transformed projects:', transformedProjects); // Debug log
 
     return NextResponse.json({ 
       success: true,
@@ -66,28 +58,42 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  // Check for authorization header
-  const authHeader = request.headers.get('authorization');
-  if (!authHeader?.startsWith('Bearer ')) {
-    return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
-  }
-
-  // Check for admin access
-  const adminAccess = request.cookies.get('adminAccess')?.value;
-  if (!adminAccess || adminAccess !== 'true') {
-    return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
-  }
-
   try {
+    // Check for admin access
+    const adminAccess = request.cookies.get('adminAccess')?.value;
+    if (!adminAccess || adminAccess !== 'true') {
+      return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
+    }
+
+    // Check for authorization header
+    const authHeader = request.headers.get('authorization');
+    if (!authHeader?.startsWith('Bearer ')) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
+    }
+
+    // Verify admin email
+    const adminEmail = authHeader.split(' ')[1];
+    if (adminEmail !== 'admin@savekat.com') {
+      return NextResponse.json({ error: 'Invalid admin credentials' }, { status: 401 });
+    }
+
+    await dbConnect();
     const data = await request.json();
     
     // Create new project in database
-    const project = await Project.create(data);
+    const project = await Project.create({
+      ...data,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    });
     
     return NextResponse.json({ 
       success: true,
       message: "Project created successfully",
-      project: project
+      project: {
+        id: project._id,
+        ...data
+      }
     });
   } catch (error) {
     console.error('Project creation error:', error);

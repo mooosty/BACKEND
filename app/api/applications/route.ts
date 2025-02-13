@@ -1,38 +1,117 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { userAuth } from '@/middleware/userAuth';
-import dbConnect, { Application } from '@/lib/db';
+import { userAuth, isAdmin } from '@/middleware/userAuth';
+import dbConnect from '@/lib/db';
+import Application from '@/src/models/Application';
+
+interface AuthResult {
+  user: {
+    email: string;
+    role: string;
+  };
+}
 
 export async function GET(request: NextRequest) {
-  return userAuth(async (req: NextRequest) => {
-    try {
-      // Connect to database
-      await dbConnect();
+  try {
+    // Authenticate user
+    const authResult = await userAuth(request);
+    if (!('user' in authResult)) {
+      return authResult as NextResponse;
+    }
 
-      // Get user email from auth header
-      const userEmail = req.headers.get('x-user-email');
-      if (!userEmail) {
-        return NextResponse.json({
-          success: false,
-          message: 'User email not found'
-        }, { status: 401 });
-      }
+    const { user } = authResult as AuthResult;
 
-      // Get all applications for the user
-      const applications = await Application.find({ userId: userEmail })
-        .sort({ createdAt: -1 })  // Sort by newest first
-        .populate('projectId', 'title status'); // Include project details
+    // Connect to database
+    await dbConnect();
 
-      return NextResponse.json({
-        success: true,
-        message: 'Applications retrieved successfully',
-        applications
-      });
-    } catch (error) {
-      console.error('Error getting applications:', error);
+    // Query based on user role
+    let applications;
+    if (isAdmin(user)) {
+      // Admin can see all applications
+      applications = await Application.find()
+        .sort({ createdAt: -1 })
+        .populate('projectId', 'title status');
+    } else {
+      // Regular users can only see their own applications
+      applications = await Application.find({ userId: user.email })
+        .sort({ createdAt: -1 })
+        .populate('projectId', 'title status');
+    }
+
+    // Transform applications for response
+    const transformedApplications = applications.map(app => {
+      const plainApp = app.toObject();
+      return {
+        id: plainApp._id.toString(),
+        userId: plainApp.userId,
+        projectId: plainApp.projectId._id.toString(),
+        projectTitle: plainApp.projectId.title,
+        answers: plainApp.answers,
+        status: plainApp.status,
+        createdAt: plainApp.createdAt,
+        updatedAt: plainApp.updatedAt
+      };
+    });
+
+    return NextResponse.json({
+      success: true,
+      data: transformedApplications
+    });
+  } catch (error) {
+    console.error('Error getting applications:', error);
+    return NextResponse.json({
+      success: false,
+      error: 'Failed to get applications'
+    }, { status: 500 });
+  }
+}
+
+export async function POST(request: NextRequest) {
+  try {
+    // Authenticate user
+    const authResult = await userAuth(request);
+    if (!('user' in authResult)) {
+      return authResult as NextResponse;
+    }
+
+    const { user } = authResult as AuthResult;
+
+    // Get request body
+    const data = await request.json();
+
+    // Validate required fields
+    if (!data.projectId || !data.answers) {
       return NextResponse.json({
         success: false,
-        message: 'Failed to get applications'
-      }, { status: 500 });
+        error: 'Missing required fields'
+      }, { status: 400 });
     }
-  })(request);
+
+    // Connect to database
+    await dbConnect();
+
+    // Create application
+    const application = await Application.create({
+      userId: user.email,
+      projectId: data.projectId,
+      answers: data.answers,
+      status: 'PENDING',
+      createdAt: new Date(),
+      updatedAt: new Date()
+    });
+
+    return NextResponse.json({
+      success: true,
+      message: 'Application submitted successfully',
+      application: {
+        id: application._id,
+        ...data
+      }
+    });
+  } catch (error) {
+    console.error('Error creating application:', error);
+    return NextResponse.json({
+      success: false,
+      error: 'Failed to submit application'
+    }, { status: 500 });
+  }
 } 
